@@ -76,7 +76,11 @@ O programa já consegue:
 
 \- seleção de arquivos isolada em `src/audio_files.py`;
 
-\- funções auxiliares reunidas em `src/helpers.py`.
+\- funções auxiliares reunidas em `src/helpers.py`;
+
+\- análise básica de áudio isolada em `src/basic_analysis.py`;
+
+\- BPM, tonalidade, energia e espectro separados do arquivo principal.
 
 
 \## Tecnologias
@@ -108,11 +112,11 @@ music_prompt_analyzer/
 │   ├── __init__.py
 │   ├── config.py
 │   ├── audio_files.py
+│   ├── basic_analysis.py
 │   └── helpers.py
 │
 ├── input/
 └── output/
-
 
 
 
