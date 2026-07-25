@@ -68,6 +68,10 @@ PERFIL_MENOR = np.array([
 DURACAO_SEGMENTO_SEGUNDOS = 10
 HOP_LENGTH = 512
 
+LIMIAR_CRESCIMENTO_FORTE = 0.30
+LIMIAR_QUEDA_FORTE = -0.30
+LIMIAR_MUDANCA_SECA = 0.42
+
 
 def listar_arquivos_audio(pasta_input: Path) -> list[Path]:
     """
@@ -388,9 +392,6 @@ def normalizar_valores(
 ) -> list[float]:
     """
     Normaliza uma sequência para uma escala entre 0 e 1.
-
-    Usa os percentis 10 e 90 para reduzir o impacto
-    de valores extremos.
     """
 
     if not valores:
@@ -487,18 +488,44 @@ def identificar_tendencia_dinamica(
     return "mantém intensidade relativamente estável"
 
 
+def calcular_media_segmento(
+    valores: np.ndarray,
+    mascara: np.ndarray,
+) -> float:
+    """
+    Calcula a média dos valores pertencentes a um segmento.
+    """
+
+    trecho = valores[mascara]
+
+    if trecho.size == 0:
+        return 0.0
+
+    return float(
+        np.mean(trecho)
+    )
+
+
 def analisar_dinamica(
     audio: np.ndarray,
     taxa_amostragem: int,
 ) -> dict:
     """
-    Divide a música em trechos e analisa a energia ao longo do tempo.
+    Divide a música em trechos e analisa energia e brilho ao longo do tempo.
     """
 
     rms_frames = librosa.feature.rms(
         y=audio,
         hop_length=HOP_LENGTH,
     )[0]
+
+    centroide_frames = (
+        librosa.feature.spectral_centroid(
+            y=audio,
+            sr=taxa_amostragem,
+            hop_length=HOP_LENGTH,
+        )[0]
+    )
 
     tempos_frames = librosa.frames_to_time(
         np.arange(
@@ -530,26 +557,31 @@ def analisar_dinamica(
             & (tempos_frames < fim_segmento)
         )
 
-        valores_segmento = rms_frames[
+        valores_rms = rms_frames[
             mascara
         ]
 
-        if valores_segmento.size == 0:
+        if valores_rms.size == 0:
             energia_media = 0.0
             energia_maxima = 0.0
 
         else:
             energia_media = float(
                 np.mean(
-                    valores_segmento
+                    valores_rms
                 )
             )
 
             energia_maxima = float(
                 np.max(
-                    valores_segmento
+                    valores_rms
                 )
             )
+
+        brilho_medio = calcular_media_segmento(
+            centroide_frames,
+            mascara,
+        )
 
         segmentos_brutos.append({
             "inicio_segundos": round(
@@ -568,6 +600,10 @@ def analisar_dinamica(
                 energia_maxima,
                 6,
             ),
+            "brilho_medio_hz": round(
+                brilho_medio,
+                2,
+            ),
         })
 
         inicio_segmento = fim_segmento
@@ -577,8 +613,17 @@ def analisar_dinamica(
         for segmento in segmentos_brutos
     ]
 
+    brilhos_medios = [
+        segmento["brilho_medio_hz"]
+        for segmento in segmentos_brutos
+    ]
+
     energias_normalizadas = normalizar_valores(
         energias_medias
+    )
+
+    brilhos_normalizados = normalizar_valores(
+        brilhos_medios
     )
 
     linha_do_tempo = []
@@ -588,6 +633,10 @@ def analisar_dinamica(
     ):
         energia_normalizada = (
             energias_normalizadas[indice]
+        )
+
+        brilho_normalizado = (
+            brilhos_normalizados[indice]
         )
 
         linha_do_tempo.append({
@@ -612,6 +661,13 @@ def analisar_dinamica(
             ),
             "energia_relativa": round(
                 energia_normalizada,
+                4,
+            ),
+            "brilho_medio_hz": (
+                segmento["brilho_medio_hz"]
+            ),
+            "brilho_relativo": round(
+                brilho_normalizado,
                 4,
             ),
             "classificacao": (
@@ -726,13 +782,168 @@ def analisar_dinamica(
     }
 
 
+def classificar_evento_transicao(
+    variacao_energia: float,
+    variacao_brilho: float,
+    pontuacao_mudanca: float,
+    energia_atual: float,
+    energia_anterior: float,
+) -> str:
+    """
+    Classifica uma mudança relevante entre dois segmentos.
+    """
+
+    if variacao_energia >= LIMIAR_CRESCIMENTO_FORTE:
+        if energia_anterior < 0.40 and energia_atual >= 0.65:
+            return "entrada forte de nova seção"
+
+        return "crescimento forte de intensidade"
+
+    if variacao_energia <= LIMIAR_QUEDA_FORTE:
+        if energia_anterior >= 0.65 and energia_atual < 0.40:
+            return "queda forte para trecho mais suave"
+
+        return "queda forte de intensidade"
+
+    if pontuacao_mudanca >= LIMIAR_MUDANCA_SECA:
+        if abs(variacao_brilho) >= 0.35:
+            return "possível mudança de seção e timbre"
+
+        return "possível mudança de seção"
+
+    if (
+        energia_anterior < 0.40
+        and energia_atual >= 0.55
+    ):
+        return "retomada de energia"
+
+    return "mudança moderada"
+
+
+def detectar_transicoes(
+    dinamica: dict,
+) -> list[dict]:
+    """
+    Detecta mudanças relevantes entre segmentos consecutivos.
+    """
+
+    linha_do_tempo = dinamica[
+        "linha_do_tempo"
+    ]
+
+    transicoes = []
+
+    for indice in range(
+        1,
+        len(linha_do_tempo),
+    ):
+        anterior = linha_do_tempo[
+            indice - 1
+        ]
+
+        atual = linha_do_tempo[
+            indice
+        ]
+
+        variacao_energia = (
+            atual["energia_relativa"]
+            - anterior["energia_relativa"]
+        )
+
+        variacao_brilho = (
+            atual["brilho_relativo"]
+            - anterior["brilho_relativo"]
+        )
+
+        pontuacao_mudanca = (
+            abs(variacao_energia) * 0.70
+            + abs(variacao_brilho) * 0.30
+        )
+
+        mudou_classificacao = (
+            atual["classificacao"]
+            != anterior["classificacao"]
+        )
+
+        evento_relevante = (
+            abs(variacao_energia) >= 0.22
+            or abs(variacao_brilho) >= 0.32
+            or pontuacao_mudanca >= 0.30
+        )
+
+        if not evento_relevante:
+            continue
+
+        tipo_evento = classificar_evento_transicao(
+            variacao_energia=variacao_energia,
+            variacao_brilho=variacao_brilho,
+            pontuacao_mudanca=pontuacao_mudanca,
+            energia_atual=atual["energia_relativa"],
+            energia_anterior=anterior[
+                "energia_relativa"
+            ],
+        )
+
+        transicoes.append({
+            "tempo_segundos": atual[
+                "inicio_segundos"
+            ],
+            "tempo_formatado": atual[
+                "inicio_formatado"
+            ],
+            "segmento_anterior": anterior[
+                "segmento"
+            ],
+            "segmento_atual": atual[
+                "segmento"
+            ],
+            "evento": tipo_evento,
+            "variacao_energia": round(
+                variacao_energia,
+                4,
+            ),
+            "variacao_brilho": round(
+                variacao_brilho,
+                4,
+            ),
+            "pontuacao_mudanca": round(
+                pontuacao_mudanca,
+                4,
+            ),
+            "mudou_classificacao": (
+                mudou_classificacao
+            ),
+            "energia_anterior": anterior[
+                "energia_relativa"
+            ],
+            "energia_atual": atual[
+                "energia_relativa"
+            ],
+            "brilho_anterior": anterior[
+                "brilho_relativo"
+            ],
+            "brilho_atual": atual[
+                "brilho_relativo"
+            ],
+        })
+
+    transicoes.sort(
+        key=lambda item: item[
+            "tempo_segundos"
+        ]
+    )
+
+    return transicoes
+
+
 def gerar_grafico_dinamica(
     dinamica: dict,
+    transicoes: list[dict],
     caminho_grafico: Path,
     nome_musica: str,
 ) -> None:
     """
-    Cria um gráfico da energia relativa ao longo da música.
+    Cria um gráfico de energia com marcações de transições.
     """
 
     linha_do_tempo = dinamica[
@@ -753,7 +964,7 @@ def gerar_grafico_dinamica(
     ]
 
     figura, eixo = plt.subplots(
-        figsize=(12, 6)
+        figsize=(14, 7)
     )
 
     eixo.plot(
@@ -761,6 +972,7 @@ def gerar_grafico_dinamica(
         energias,
         marker="o",
         linewidth=2,
+        label="Energia relativa",
     )
 
     eixo.fill_between(
@@ -785,7 +997,7 @@ def gerar_grafico_dinamica(
         )
 
         eixo.annotate(
-            f"{pico['inicio']} a {pico['fim']}",
+            f"Pico {pico['inicio']}",
             (
                 tempo_central,
                 pico["energia_relativa"],
@@ -794,6 +1006,14 @@ def gerar_grafico_dinamica(
             textcoords="offset points",
             ha="center",
             fontsize=9,
+        )
+
+    for transicao in transicoes:
+        eixo.axvline(
+            x=transicao["tempo_segundos"],
+            linestyle=":",
+            linewidth=1,
+            alpha=0.65,
         )
 
     eixo.axhline(
@@ -811,7 +1031,7 @@ def gerar_grafico_dinamica(
     )
 
     eixo.set_title(
-        f"Dinâmica musical: {nome_musica}"
+        f"Dinâmica e transições: {nome_musica}"
     )
 
     eixo.set_xlabel(
@@ -854,6 +1074,8 @@ def gerar_grafico_dinamica(
     eixo.grid(
         alpha=0.25,
     )
+
+    eixo.legend()
 
     figura.tight_layout()
 
@@ -999,6 +1221,14 @@ def analisar_audio(
         taxa_amostragem=taxa_amostragem,
     )
 
+    print(
+        "Detectando mudanças entre os segmentos..."
+    )
+
+    transicoes = detectar_transicoes(
+        dinamica
+    )
+
     resultado = {
         "arquivo": caminho_audio.name,
         "formato": (
@@ -1074,6 +1304,12 @@ def analisar_audio(
             ),
         },
         "dinamica": dinamica,
+        "estrutura_aproximada": {
+            "quantidade_transicoes": len(
+                transicoes
+            ),
+            "transicoes": transicoes,
+        },
     }
 
     return resultado
@@ -1092,6 +1328,9 @@ def criar_descricao(
     espectro = resultado["espectro"]
     duracao = resultado["duracao"]
     dinamica = resultado["dinamica"]
+    estrutura = resultado[
+        "estrutura_aproximada"
+    ]
 
     picos = dinamica[
         "picos_principais"
@@ -1129,6 +1368,9 @@ def criar_descricao(
         f"{dinamica['variacao_dinamica']} "
         f"e a faixa "
         f"{dinamica['tendencia_geral']}. "
+        f"Foram detectadas "
+        f"{estrutura['quantidade_transicoes']} "
+        f"mudanças relevantes entre os trechos. "
         f"{descricao_pico}"
     )
 
@@ -1209,6 +1451,8 @@ def salvar_csv_dinamica(
         "energia_media_rms",
         "energia_maxima_rms",
         "energia_relativa",
+        "brilho_medio_hz",
+        "brilho_relativo",
         "classificacao",
     ]
 
@@ -1227,6 +1471,48 @@ def salvar_csv_dinamica(
 
         escritor.writerows(
             dinamica["linha_do_tempo"]
+        )
+
+
+def salvar_csv_transicoes(
+    transicoes: list[dict],
+    caminho_csv: Path,
+) -> None:
+    """
+    Salva as transições detectadas em CSV.
+    """
+
+    campos = [
+        "tempo_segundos",
+        "tempo_formatado",
+        "segmento_anterior",
+        "segmento_atual",
+        "evento",
+        "variacao_energia",
+        "variacao_brilho",
+        "pontuacao_mudanca",
+        "mudou_classificacao",
+        "energia_anterior",
+        "energia_atual",
+        "brilho_anterior",
+        "brilho_atual",
+    ]
+
+    with caminho_csv.open(
+        "w",
+        encoding="utf-8-sig",
+        newline="",
+    ) as arquivo_csv:
+        escritor = csv.DictWriter(
+            arquivo_csv,
+            fieldnames=campos,
+            delimiter=";",
+        )
+
+        escritor.writeheader()
+
+        escritor.writerows(
+            transicoes
         )
 
 
@@ -1271,8 +1557,12 @@ def salvar_resultados(
         pasta_musica / "descricao.txt"
     )
 
-    caminho_csv = (
+    caminho_dinamica = (
         pasta_musica / "dinamica.csv"
+    )
+
+    caminho_transicoes = (
+        pasta_musica / "transicoes.csv"
     )
 
     caminho_grafico = (
@@ -1300,7 +1590,14 @@ def salvar_resultados(
 
     salvar_csv_dinamica(
         dinamica=resultado["dinamica"],
-        caminho_csv=caminho_csv,
+        caminho_csv=caminho_dinamica,
+    )
+
+    salvar_csv_transicoes(
+        transicoes=resultado[
+            "estrutura_aproximada"
+        ]["transicoes"],
+        caminho_csv=caminho_transicoes,
     )
 
     print(
@@ -1309,6 +1606,9 @@ def salvar_resultados(
 
     gerar_grafico_dinamica(
         dinamica=resultado["dinamica"],
+        transicoes=resultado[
+            "estrutura_aproximada"
+        ]["transicoes"],
         caminho_grafico=caminho_grafico,
         nome_musica=caminho_audio.stem,
     )
@@ -1328,7 +1628,11 @@ def salvar_resultados(
     )
 
     print(
-        f"Dinâmica: {caminho_csv.name}"
+        f"Dinâmica: {caminho_dinamica.name}"
+    )
+
+    print(
+        f"Transições: {caminho_transicoes.name}"
     )
 
     print(
@@ -1383,6 +1687,38 @@ def exibir_resumo_dinamica(
             f"{pico['inicio']} até "
             f"{pico['fim']} "
             f"({pico['classificacao']})"
+        )
+
+
+def exibir_transicoes(
+    resultado: dict,
+) -> None:
+    """
+    Exibe as mudanças relevantes detectadas.
+    """
+
+    estrutura = resultado[
+        "estrutura_aproximada"
+    ]
+
+    transicoes = estrutura[
+        "transicoes"
+    ]
+
+    print()
+    print("MUDANÇAS RELEVANTES")
+    print("-------------------")
+
+    if not transicoes:
+        print(
+            "Nenhuma mudança forte foi detectada."
+        )
+        return
+
+    for transicao in transicoes:
+        print(
+            f"{transicao['tempo_formatado']} "
+            f"{transicao['evento']}"
         )
 
 
@@ -1446,6 +1782,10 @@ def main() -> None:
         print(descricao)
 
         exibir_resumo_dinamica(
+            resultado
+        )
+
+        exibir_transicoes(
             resultado
         )
 

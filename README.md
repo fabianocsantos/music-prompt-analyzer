@@ -42,7 +42,19 @@ O programa já consegue:
 
 \- gerar uma linha do tempo em CSV;
 
-\- gerar um gráfico visual da dinâmica da faixa.
+\- gerar um gráfico visual da dinâmica da faixa;
+
+\- comparar segmentos consecutivos da música;
+
+\- detectar crescimentos e quedas de intensidade;
+
+\- identificar possíveis mudanças de seção;
+
+\- medir mudanças de brilho entre os trechos;
+
+\- gerar um relatório de transições em CSV;
+
+\- marcar transições no gráfico de dinâmica.
 
 
 \## Tecnologias
@@ -80,6 +92,8 @@ music\_prompt\_analyzer/
 ├── dinamica.csv
 
 ├── grafico_dinamica.png
+
+├── transicoes.csv
 
 ├── README.md
 
