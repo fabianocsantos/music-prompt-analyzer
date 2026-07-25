@@ -5,6 +5,9 @@ import librosa
 from src.basic_analysis import (
     analisar_caracteristicas_basicas,
 )
+from src.component_analysis import (
+    analisar_componentes,
+)
 from src.dynamics import (
     analisar_dinamica,
     detectar_transicoes,
@@ -40,6 +43,11 @@ def analisar_audio(
         )
 
     basico = analisar_caracteristicas_basicas(
+        audio=audio,
+        taxa_amostragem=taxa_amostragem,
+    )
+
+    componentes = analisar_componentes(
         audio=audio,
         taxa_amostragem=taxa_amostragem,
     )
@@ -86,6 +94,7 @@ def analisar_audio(
             .replace(".", "")
         ),
         **basico,
+        "componentes": componentes,
         "dinamica": dinamica,
         "estrutura_aproximada": {
             "quantidade_transicoes": len(
@@ -125,6 +134,10 @@ def criar_descricao(
 
     espectro = resultado[
         "espectro"
+    ]
+
+    componentes = resultado[
+        "componentes"
     ]
 
     duracao = resultado[
@@ -175,6 +188,13 @@ def criar_descricao(
         f"{energia['classificacao']}, "
         f"com perfil sonoro "
         f"{espectro['brilho_estimado']}. "
+        f"O equilíbrio entre componentes é "
+        f"{componentes['classificacao']}, "
+        f"com aproximadamente "
+        f"{componentes['percentual_harmonico']:.0f}% "
+        f"de conteúdo harmônico e "
+        f"{componentes['percentual_percussivo']:.0f}% "
+        f"de conteúdo percussivo. "
         f"A variação dinâmica é "
         f"{dinamica['variacao_dinamica']} "
         f"e a faixa "

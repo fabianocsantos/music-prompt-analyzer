@@ -102,6 +102,18 @@ O programa já consegue:
 
 \- responsabilidades do projeto divididas em módulos independentes.
 
+\- separação harmônica e percussiva com HPSS;
+
+\- medição do equilíbrio entre conteúdo harmônico e percussivo;
+
+\- análise por segmentos de 10 segundos;
+
+\- identificação dos trechos mais harmônicos e mais percussivos;
+
+\-  geração de relatório em CSV;
+
+\- geração de gráfico dos componentes.
+
 
 \## Tecnologias
 
@@ -138,6 +150,7 @@ music_prompt_analyzer/
 │   ├── pipeline.py
 │   ├── reporting.py
 │   └── structure_analysis.py
+│   ├── component_analysis.py
 │
 ├── input/
 └── output/

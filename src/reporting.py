@@ -4,6 +4,9 @@ from pathlib import Path
 
 import numpy as np
 
+from src.component_analysis import (
+    gerar_grafico_componentes,
+)
 from src.dynamics import (
     gerar_grafico_dinamica,
 )
@@ -52,6 +55,45 @@ def salvar_csv_dinamica(
 
         escritor.writerows(
             dinamica["linha_do_tempo"]
+        )
+
+
+def salvar_csv_componentes(
+    componentes: dict,
+    caminho_csv: Path,
+) -> None:
+    """
+    Salva a evolução harmônica e percussiva em CSV.
+    """
+
+    campos = [
+        "segmento",
+        "inicio_segundos",
+        "fim_segundos",
+        "inicio_formatado",
+        "fim_formatado",
+        "energia_harmonica",
+        "energia_percussiva",
+        "proporcao_harmonica",
+        "proporcao_percussiva",
+        "classificacao",
+    ]
+
+    with caminho_csv.open(
+        "w",
+        encoding="utf-8-sig",
+        newline="",
+    ) as arquivo_csv:
+        escritor = csv.DictWriter(
+            arquivo_csv,
+            fieldnames=campos,
+            delimiter=";",
+        )
+
+        escritor.writeheader()
+
+        escritor.writerows(
+            componentes["linha_do_tempo"]
         )
 
 
@@ -267,6 +309,11 @@ def salvar_resultados(
         / "dinamica.csv"
     )
 
+    caminho_componentes = (
+        pasta_musica
+        / "componentes.csv"
+    )
+
     caminho_transicoes = (
         pasta_musica
         / "transicoes.csv"
@@ -285,6 +332,11 @@ def salvar_resultados(
     caminho_grafico_dinamica = (
         pasta_musica
         / "grafico_dinamica.png"
+    )
+
+    caminho_grafico_componentes = (
+        pasta_musica
+        / "grafico_componentes.png"
     )
 
     caminho_grafico_similaridade = (
@@ -334,6 +386,13 @@ def salvar_resultados(
         caminho_csv=caminho_dinamica,
     )
 
+    salvar_csv_componentes(
+        componentes=resultado[
+            "componentes"
+        ],
+        caminho_csv=caminho_componentes,
+    )
+
     salvar_csv_transicoes(
         transicoes=resultado[
             "estrutura_aproximada"
@@ -359,6 +418,22 @@ def salvar_resultados(
         ]["transicoes"],
         caminho_grafico=(
             caminho_grafico_dinamica
+        ),
+        nome_musica=(
+            caminho_audio.stem
+        ),
+    )
+
+    print(
+        "Gerando gráfico de componentes..."
+    )
+
+    gerar_grafico_componentes(
+        componentes=resultado[
+            "componentes"
+        ],
+        caminho_grafico=(
+            caminho_grafico_componentes
         ),
         nome_musica=(
             caminho_audio.stem
@@ -392,10 +467,12 @@ def salvar_resultados(
     print("- analise.json")
     print("- descricao.txt")
     print("- dinamica.csv")
+    print("- componentes.csv")
     print("- transicoes.csv")
     print("- similaridade.csv")
     print("- mapa_estrutura.txt")
     print("- grafico_dinamica.png")
+    print("- grafico_componentes.png")
     print("- grafico_similaridade.png")
 
     return pasta_musica
@@ -408,6 +485,10 @@ def exibir_resumo(
     """
     Exibe o resumo completo no terminal.
     """
+
+    componentes = resultado[
+        "componentes"
+    ]
 
     dinamica = resultado[
         "dinamica"
@@ -425,6 +506,47 @@ def exibir_resumo(
     print("RESUMO")
     print("------")
     print(descricao)
+
+    print()
+    print("COMPONENTES")
+    print("-----------")
+
+    print(
+        f"Equilíbrio geral: "
+        f"{componentes['classificacao']}"
+    )
+
+    print(
+        f"Conteúdo harmônico: "
+        f"{componentes['percentual_harmonico']:.2f}%"
+    )
+
+    print(
+        f"Conteúdo percussivo: "
+        f"{componentes['percentual_percussivo']:.2f}%"
+    )
+
+    destaque_harmonico = componentes[
+        "destaques"
+    ]["mais_harmonico"]
+
+    destaque_percussivo = componentes[
+        "destaques"
+    ]["mais_percussivo"]
+
+    if destaque_harmonico:
+        print(
+            f"Trecho mais harmônico: "
+            f"{destaque_harmonico['inicio']} até "
+            f"{destaque_harmonico['fim']}"
+        )
+
+    if destaque_percussivo:
+        print(
+            f"Trecho mais percussivo: "
+            f"{destaque_percussivo['inicio']} até "
+            f"{destaque_percussivo['fim']}"
+        )
 
     print()
     print("DINÂMICA")
