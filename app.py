@@ -12,6 +12,9 @@ from src.reporting import (
     exibir_resumo,
     salvar_resultados,
 )
+from src.vocal_reporting import (
+    salvar_relatorios_vocais,
+)
 
 
 def main() -> None:
@@ -79,6 +82,12 @@ def main() -> None:
             ),
             pasta_output=pasta_output,
             caminho_audio=caminho_audio,
+        )
+
+        salvar_relatorios_vocais(
+            pasta_resultado=pasta_resultado,
+            resultado=resultado,
+            nome_musica=caminho_audio.stem,
         )
 
         exibir_resumo(

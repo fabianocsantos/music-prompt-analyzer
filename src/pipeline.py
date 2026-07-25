@@ -15,6 +15,9 @@ from src.dynamics import (
 from src.structure_analysis import (
     analisar_repeticoes,
 )
+from src.vocal_analysis import (
+    analisar_presenca_vocal,
+)
 
 
 def analisar_audio(
@@ -48,6 +51,11 @@ def analisar_audio(
     )
 
     componentes = analisar_componentes(
+        audio=audio,
+        taxa_amostragem=taxa_amostragem,
+    )
+
+    presenca_vocal = analisar_presenca_vocal(
         audio=audio,
         taxa_amostragem=taxa_amostragem,
     )
@@ -95,6 +103,9 @@ def analisar_audio(
         ),
         **basico,
         "componentes": componentes,
+        "presenca_vocal_provavel": (
+            presenca_vocal
+        ),
         "dinamica": dinamica,
         "estrutura_aproximada": {
             "quantidade_transicoes": len(
@@ -138,6 +149,10 @@ def criar_descricao(
 
     componentes = resultado[
         "componentes"
+    ]
+
+    presenca_vocal = resultado[
+        "presenca_vocal_provavel"
     ]
 
     duracao = resultado[
@@ -195,6 +210,10 @@ def criar_descricao(
         f"de conteúdo harmônico e "
         f"{componentes['percentual_percussivo']:.0f}% "
         f"de conteúdo percussivo. "
+        f"A presença vocal provável foi classificada "
+        f"como {presenca_vocal['classificacao_geral']}, "
+        f"com pontuação média de "
+        f"{presenca_vocal['probabilidade_media']:.2f}. "
         f"A variação dinâmica é "
         f"{dinamica['variacao_dinamica']} "
         f"e a faixa "

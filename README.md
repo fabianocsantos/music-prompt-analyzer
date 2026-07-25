@@ -114,6 +114,17 @@ O programa já consegue:
 
 \- geração de gráfico dos componentes.
 
+\- análise heurística de presença vocal provável;
+
+\-estimativa vocal por energia, harmonicidade e características espectrais;
+
+\- identificação de regiões consecutivas com indícios de voz;
+
+\- geração de linha do tempo vocal em CSV;
+
+\- geração de relatório textual e gráfico de probabilidade vocal;
+
+\- aviso explícito de que o método não separa nem identifica vozes.
 
 \## Tecnologias
 
@@ -151,6 +162,8 @@ music_prompt_analyzer/
 │   ├── reporting.py
 │   └── structure_analysis.py
 │   ├── component_analysis.py
+│   ├── vocal_analysis.py
+│   └── vocal_reporting.py
 │
 ├── input/
 └── output/
