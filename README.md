@@ -92,7 +92,15 @@ O programa já consegue:
 
 \- agrupamento de trechos e criação dos mapas estruturais separados do arquivo principal;
 
-\- geração do gráfico de similaridade movida para o módulo estrutural.
+\- geração do gráfico de similaridade movida para o módulo estrutural;
+
+\- fluxo completo de análise coordenado por `src/pipeline.py`;
+
+\- salvamento de arquivos e exibição de resultados isolados em `src/reporting.py`;
+
+\- `app.py` reduzido ao ponto de entrada e tratamento geral de erros;
+
+\- responsabilidades do projeto divididas em módulos independentes.
 
 
 \## Tecnologias
@@ -122,15 +130,16 @@ music_prompt_analyzer/
 │
 ├── src/
 │   ├── __init__.py
-│   ├── config.py
 │   ├── audio_files.py
 │   ├── basic_analysis.py
+│   ├── config.py
 │   ├── dynamics.py
-│   ├── structure_analysis.py
-│   └── helpers.py
+│   ├── helpers.py
+│   ├── pipeline.py
+│   ├── reporting.py
+│   └── structure_analysis.py
 │
 ├── input/
 └── output/
-
 
 
