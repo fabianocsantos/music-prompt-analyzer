@@ -80,7 +80,13 @@ O programa já consegue:
 
 \- análise básica de áudio isolada em `src/basic_analysis.py`;
 
-\- BPM, tonalidade, energia e espectro separados do arquivo principal.
+\- BPM, tonalidade, energia e espectro separados do arquivo principal;
+
+\- análise de dinâmica isolada em `src/dynamics.py`;
+
+\- detecção de transições separada do arquivo principal;
+
+\- geração do gráfico de dinâmica movida para o módulo de dinâmica.
 
 
 \## Tecnologias
@@ -113,11 +119,11 @@ music_prompt_analyzer/
 │   ├── config.py
 │   ├── audio_files.py
 │   ├── basic_analysis.py
+│   ├── dynamics.py
 │   └── helpers.py
 │
 ├── input/
 └── output/
-
 
 
 
