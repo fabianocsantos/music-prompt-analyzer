@@ -1,166 +1,34 @@
 import csv
 import json
-import re
 from pathlib import Path
 
 import librosa
 import matplotlib.pyplot as plt
 import numpy as np
 
-
-EXTENSOES_SUPORTADAS = {
-    ".mp3",
-    ".wav",
-    ".flac",
-    ".m4a",
-    ".ogg",
-}
-
-NOMES_NOTAS = [
-    "Dó",
-    "Dó sustenido",
-    "Ré",
-    "Ré sustenido",
-    "Mi",
-    "Fá",
-    "Fá sustenido",
-    "Sol",
-    "Sol sustenido",
-    "Lá",
-    "Lá sustenido",
-    "Si",
-]
-
-PERFIL_MAIOR = np.array([
-    6.35,
-    2.23,
-    3.48,
-    2.33,
-    4.38,
-    4.09,
-    2.52,
-    5.19,
-    2.39,
-    3.66,
-    2.29,
-    2.88,
-])
-
-PERFIL_MENOR = np.array([
-    6.33,
-    2.68,
-    3.52,
-    5.38,
-    2.60,
-    3.53,
-    2.54,
-    4.75,
-    3.98,
-    2.69,
-    3.34,
-    3.17,
-])
-
-DURACAO_SEGMENTO_SEGUNDOS = 10
-HOP_LENGTH = 512
-
-LIMIAR_CRESCIMENTO_FORTE = 0.30
-LIMIAR_QUEDA_FORTE = -0.30
-LIMIAR_MUDANCA_SECA = 0.42
-
-LIMIAR_SIMILARIDADE_DISTANTE = 0.84
-LIMIAR_SIMILARIDADE_ADJACENTE = 0.92
-
-
-def listar_arquivos_audio(pasta_input: Path) -> list[Path]:
-    arquivos = [
-        arquivo
-        for arquivo in pasta_input.iterdir()
-        if arquivo.is_file()
-        and arquivo.suffix.lower() in EXTENSOES_SUPORTADAS
-    ]
-
-    arquivos.sort(key=lambda arquivo: arquivo.name.lower())
-
-    return arquivos
-
-
-def escolher_arquivo_audio(arquivos: list[Path]) -> Path:
-    if not arquivos:
-        extensoes = ", ".join(sorted(EXTENSOES_SUPORTADAS))
-
-        raise FileNotFoundError(
-            "Nenhum arquivo de áudio foi encontrado na pasta input.\n"
-            f"Formatos aceitos: {extensoes}"
-        )
-
-    if len(arquivos) == 1:
-        arquivo = arquivos[0]
-
-        print("Uma música foi encontrada:")
-        print(f"1. {arquivo.name}")
-        print()
-        print(f"Selecionando automaticamente: {arquivo.name}")
-
-        return arquivo
-
-    print("Músicas encontradas:")
-    print()
-
-    for indice, arquivo in enumerate(arquivos, start=1):
-        tamanho_mb = arquivo.stat().st_size / (1024 * 1024)
-
-        print(
-            f"{indice}. {arquivo.name} "
-            f"({tamanho_mb:.2f} MB)"
-        )
-
-    print()
-
-    while True:
-        resposta = input(
-            "Digite o número da música que deseja "
-            f"analisar [1-{len(arquivos)}]: "
-        ).strip()
-
-        try:
-            numero_escolhido = int(resposta)
-
-        except ValueError:
-            print(
-                "Digite apenas o número correspondente "
-                "à música."
-            )
-            continue
-
-        if 1 <= numero_escolhido <= len(arquivos):
-            return arquivos[numero_escolhido - 1]
-
-        print(
-            f"Escolha um número entre 1 "
-            f"e {len(arquivos)}."
-        )
-
-
-def converter_para_numero(valor) -> float:
-    array = np.asarray(valor)
-
-    if array.size == 0:
-        return 0.0
-
-    return float(array.reshape(-1)[0])
-
-
-def formatar_tempo(segundos: float) -> str:
-    segundos_inteiros = max(
-        0,
-        int(round(segundos)),
-    )
-
-    minutos = segundos_inteiros // 60
-    segundos_restantes = segundos_inteiros % 60
-
-    return f"{minutos:02d}:{segundos_restantes:02d}"
+from src.audio_files import (
+    escolher_arquivo_audio,
+    listar_arquivos_audio,
+)
+from src.config import (
+    DURACAO_SEGMENTO_SEGUNDOS,
+    HOP_LENGTH,
+    LIMIAR_CRESCIMENTO_FORTE,
+    LIMIAR_MUDANCA_SECA,
+    LIMIAR_QUEDA_FORTE,
+    LIMIAR_SIMILARIDADE_ADJACENTE,
+    LIMIAR_SIMILARIDADE_DISTANTE,
+    NOMES_NOTAS,
+    PERFIL_MAIOR,
+    PERFIL_MENOR,
+)
+from src.helpers import (
+    converter_para_numero,
+    formatar_tempo,
+    normalizar_nome_arquivo,
+    normalizar_valores,
+    numero_para_rotulo,
+)
 
 
 def classificar_andamento(bpm: float) -> str:
@@ -316,49 +184,6 @@ def estimar_tonalidade(
             4,
         ),
     }
-
-
-def normalizar_valores(
-    valores: list[float],
-) -> list[float]:
-    if not valores:
-        return []
-
-    array = np.asarray(
-        valores,
-        dtype=float,
-    )
-
-    limite_inferior = float(
-        np.percentile(array, 10)
-    )
-
-    limite_superior = float(
-        np.percentile(array, 90)
-    )
-
-    diferenca = limite_superior - limite_inferior
-
-    if diferenca <= 0:
-        return [
-            0.5
-            for _ in valores
-        ]
-
-    normalizados = (
-        array - limite_inferior
-    ) / diferenca
-
-    normalizados = np.clip(
-        normalizados,
-        0.0,
-        1.0,
-    )
-
-    return [
-        float(valor)
-        for valor in normalizados
-    ]
 
 
 def identificar_tendencia_dinamica(
@@ -986,24 +811,6 @@ class Agrupador:
             self.pais[raiz_segundo] = (
                 raiz_primeiro
             )
-
-
-def numero_para_rotulo(numero: int) -> str:
-    rotulo = ""
-    valor = numero
-
-    while True:
-        rotulo = (
-            chr(ord("A") + valor % 26)
-            + rotulo
-        )
-
-        valor = valor // 26 - 1
-
-        if valor < 0:
-            break
-
-    return rotulo
 
 
 def agrupar_segmentos_similares(
@@ -1765,59 +1572,6 @@ def criar_descricao(
         f"{repeticoes['mapa_blocos']}. "
         f"{descricao_pico}"
     )
-
-
-def normalizar_nome_arquivo(
-    nome: str,
-) -> str:
-    nome = nome.lower()
-
-    substituicoes = {
-        "á": "a",
-        "à": "a",
-        "ã": "a",
-        "â": "a",
-        "ä": "a",
-        "é": "e",
-        "è": "e",
-        "ê": "e",
-        "ë": "e",
-        "í": "i",
-        "ì": "i",
-        "î": "i",
-        "ï": "i",
-        "ó": "o",
-        "ò": "o",
-        "õ": "o",
-        "ô": "o",
-        "ö": "o",
-        "ú": "u",
-        "ù": "u",
-        "û": "u",
-        "ü": "u",
-        "ç": "c",
-    }
-
-    for caractere, substituto in (
-        substituicoes.items()
-    ):
-        nome = nome.replace(
-            caractere,
-            substituto,
-        )
-
-    nome = re.sub(
-        r"[^a-z0-9]+",
-        "_",
-        nome,
-    )
-
-    nome = nome.strip("_")
-
-    if not nome:
-        return "musica"
-
-    return nome
 
 
 def salvar_csv_dinamica(

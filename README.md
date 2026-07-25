@@ -68,7 +68,15 @@ O programa já consegue:
 
 \- gerar um mapa visual de similaridade;
 
-\- gerar um relatório textual da estrutura aproximada.
+\- gerar um relatório textual da estrutura aproximada;
+
+\- organização inicial do código em módulos;
+
+\- configurações centralizadas em `src/config.py`;
+
+\- seleção de arquivos isolada em `src/audio_files.py`;
+
+\- funções auxiliares reunidas em `src/helpers.py`.
 
 
 \## Tecnologias
@@ -89,36 +97,24 @@ O programa já consegue:
 
 \## Estrutura
 
-
-
 ```text
 
-music\_prompt\_analyzer/
-
+music_prompt_analyzer/
 ├── app.py
-
 ├── requirements.txt
-
-├── analise.json
-
-├── descricao.txt
-
-├── dinamica.csv
-
-├── grafico_dinamica.png
-
-├── transicoes.csv
-
-├── similaridade.csv
-
-├── mapa_estrutura.txt
-
-├── grafico_similaridade.png
-
 ├── README.md
-
+│
+├── src/
+│   ├── __init__.py
+│   ├── config.py
+│   ├── audio_files.py
+│   └── helpers.py
+│
 ├── input/
-
 └── output/
+
+
+
+
 
 
