@@ -1,0 +1,38 @@
+# Ambiente virtual
+.venv/
+venv/
+
+# Cache e arquivos temporários do Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Arquivos de áudio enviados para análise
+input/*
+!input/.gitkeep
+
+# Resultados gerados pelo programa
+output/*
+!output/.gitkeep
+
+# Arquivos de modelos e processamento futuro
+models/
+stems/
+temp/
+tmp/
+
+# Configurações locais e segredos
+.env
+.env.*
+!.env.example
+
+# IDEs e editores
+.vscode/
+.idea/
+
+# Arquivos do Windows
+Thumbs.db
+Desktop.ini
+
+# Logs
+*.log
