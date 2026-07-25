@@ -34,6 +34,15 @@ O programa já consegue:
 
 \- organizar cada análise em uma pasta própria.
 
+\- analisar a dinâmica da música em segmentos de 10 segundos;
+
+\- identificar trechos suaves e intensos;
+
+\- localizar os principais picos de energia;
+
+\- gerar uma linha do tempo em CSV;
+
+\- gerar um gráfico visual da dinâmica da faixa.
 
 
 \## Tecnologias
@@ -64,9 +73,18 @@ music\_prompt\_analyzer/
 
 ├── requirements.txt
 
+├── analise.json
+
+├── descricao.txt
+
+├── dinamica.csv
+
+├── grafico_dinamica.png
+
 ├── README.md
 
 ├── input/
 
 └── output/
+
 

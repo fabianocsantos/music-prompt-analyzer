@@ -4,6 +4,7 @@ import re
 from pathlib import Path
 
 import librosa
+import matplotlib.pyplot as plt
 import numpy as np
 
 
@@ -145,6 +146,7 @@ def escolher_arquivo_audio(
 
         try:
             numero_escolhido = int(resposta)
+
         except ValueError:
             print(
                 "Digite apenas o número correspondente "
@@ -312,7 +314,10 @@ def estimar_tonalidade(
         sr=taxa_amostragem,
     )
 
-    perfil_audio = np.mean(chroma, axis=1)
+    perfil_audio = np.mean(
+        chroma,
+        axis=1,
+    )
 
     melhor_correlacao = -1.0
     melhor_indice_nota = 0
@@ -384,7 +389,8 @@ def normalizar_valores(
     """
     Normaliza uma sequência para uma escala entre 0 e 1.
 
-    Usa os percentis 10 e 90 para reduzir o impacto de valores extremos.
+    Usa os percentis 10 e 90 para reduzir o impacto
+    de valores extremos.
     """
 
     if not valores:
@@ -409,7 +415,10 @@ def normalizar_valores(
     )
 
     if diferenca <= 0:
-        return [0.5 for _ in valores]
+        return [
+            0.5
+            for _ in valores
+        ]
 
     normalizados = (
         array - limite_inferior
@@ -492,7 +501,9 @@ def analisar_dinamica(
     )[0]
 
     tempos_frames = librosa.frames_to_time(
-        np.arange(len(rms_frames)),
+        np.arange(
+            len(rms_frames)
+        ),
         sr=taxa_amostragem,
         hop_length=HOP_LENGTH,
     )
@@ -505,7 +516,6 @@ def analisar_dinamica(
     )
 
     segmentos_brutos = []
-
     inicio_segmento = 0.0
 
     while inicio_segmento < duracao_total:
@@ -527,13 +537,18 @@ def analisar_dinamica(
         if valores_segmento.size == 0:
             energia_media = 0.0
             energia_maxima = 0.0
+
         else:
             energia_media = float(
-                np.mean(valores_segmento)
+                np.mean(
+                    valores_segmento
+                )
             )
 
             energia_maxima = float(
-                np.max(valores_segmento)
+                np.max(
+                    valores_segmento
+                )
             )
 
         segmentos_brutos.append({
@@ -618,11 +633,20 @@ def analisar_dinamica(
 
     for segmento in segmentos_ordenados[:3]:
         picos.append({
+            "segmento": segmento[
+                "segmento"
+            ],
             "inicio": segmento[
                 "inicio_formatado"
             ],
             "fim": segmento[
                 "fim_formatado"
+            ],
+            "inicio_segundos": segmento[
+                "inicio_segundos"
+            ],
+            "fim_segundos": segmento[
+                "fim_segundos"
             ],
             "classificacao": segmento[
                 "classificacao"
@@ -645,11 +669,15 @@ def analisar_dinamica(
     ]
 
     energia_media_global = float(
-        np.mean(energias_medias)
+        np.mean(
+            energias_medias
+        )
     )
 
     desvio_energia = float(
-        np.std(energias_medias)
+        np.std(
+            energias_medias
+        )
     )
 
     coeficiente_variacao = (
@@ -698,6 +726,148 @@ def analisar_dinamica(
     }
 
 
+def gerar_grafico_dinamica(
+    dinamica: dict,
+    caminho_grafico: Path,
+    nome_musica: str,
+) -> None:
+    """
+    Cria um gráfico da energia relativa ao longo da música.
+    """
+
+    linha_do_tempo = dinamica[
+        "linha_do_tempo"
+    ]
+
+    tempos_centrais = [
+        (
+            segmento["inicio_segundos"]
+            + segmento["fim_segundos"]
+        ) / 2
+        for segmento in linha_do_tempo
+    ]
+
+    energias = [
+        segmento["energia_relativa"]
+        for segmento in linha_do_tempo
+    ]
+
+    figura, eixo = plt.subplots(
+        figsize=(12, 6)
+    )
+
+    eixo.plot(
+        tempos_centrais,
+        energias,
+        marker="o",
+        linewidth=2,
+    )
+
+    eixo.fill_between(
+        tempos_centrais,
+        energias,
+        alpha=0.25,
+    )
+
+    for pico in dinamica[
+        "picos_principais"
+    ]:
+        tempo_central = (
+            pico["inicio_segundos"]
+            + pico["fim_segundos"]
+        ) / 2
+
+        eixo.scatter(
+            tempo_central,
+            pico["energia_relativa"],
+            s=90,
+            zorder=3,
+        )
+
+        eixo.annotate(
+            f"{pico['inicio']} a {pico['fim']}",
+            (
+                tempo_central,
+                pico["energia_relativa"],
+            ),
+            xytext=(0, 12),
+            textcoords="offset points",
+            ha="center",
+            fontsize=9,
+        )
+
+    eixo.axhline(
+        y=0.40,
+        linestyle="--",
+        linewidth=1,
+        alpha=0.7,
+    )
+
+    eixo.axhline(
+        y=0.65,
+        linestyle="--",
+        linewidth=1,
+        alpha=0.7,
+    )
+
+    eixo.set_title(
+        f"Dinâmica musical: {nome_musica}"
+    )
+
+    eixo.set_xlabel(
+        "Tempo da música"
+    )
+
+    eixo.set_ylabel(
+        "Energia relativa"
+    )
+
+    eixo.set_ylim(
+        0,
+        1.10,
+    )
+
+    duracao_total = max(
+        segmento["fim_segundos"]
+        for segmento in linha_do_tempo
+    )
+
+    intervalo_marcacao = 30
+
+    marcacoes = np.arange(
+        0,
+        duracao_total + intervalo_marcacao,
+        intervalo_marcacao,
+    )
+
+    eixo.set_xticks(
+        marcacoes
+    )
+
+    eixo.set_xticklabels([
+        formatar_tempo(
+            tempo
+        )
+        for tempo in marcacoes
+    ])
+
+    eixo.grid(
+        alpha=0.25,
+    )
+
+    figura.tight_layout()
+
+    figura.savefig(
+        caminho_grafico,
+        dpi=160,
+        bbox_inches="tight",
+    )
+
+    plt.close(
+        figura
+    )
+
+
 def analisar_audio(
     caminho_audio: Path,
 ) -> dict:
@@ -735,7 +905,9 @@ def analisar_audio(
     )
 
     audio_harmonico, audio_percussivo = (
-        librosa.effects.hpss(audio)
+        librosa.effects.hpss(
+            audio
+        )
     )
 
     print("Estimando BPM...")
@@ -745,7 +917,9 @@ def analisar_audio(
         sr=taxa_amostragem,
     )
 
-    bpm = converter_para_numero(tempo)
+    bpm = converter_para_numero(
+        tempo
+    )
 
     print("Estimando tonalidade...")
 
@@ -761,11 +935,15 @@ def analisar_audio(
     )
 
     rms_medio = float(
-        np.mean(rms)
+        np.mean(
+            rms
+        )
     )
 
     rms_maximo = float(
-        np.max(rms)
+        np.max(
+            rms
+        )
     )
 
     print(
@@ -794,15 +972,21 @@ def analisar_audio(
     )
 
     centroide_medio = float(
-        np.mean(centroide)
+        np.mean(
+            centroide
+        )
     )
 
     largura_media = float(
-        np.mean(largura_espectral)
+        np.mean(
+            largura_espectral
+        )
     )
 
     zero_crossing_medio = float(
-        np.mean(zero_crossing)
+        np.mean(
+            zero_crossing
+        )
     )
 
     print(
@@ -844,10 +1028,14 @@ def analisar_audio(
                 2,
             ),
             "classificacao": (
-                classificar_andamento(bpm)
+                classificar_andamento(
+                    bpm
+                )
             ),
             "batidas_detectadas": int(
-                len(batidas)
+                len(
+                    batidas
+                )
             ),
         },
         "tonalidade": tonalidade,
@@ -1087,6 +1275,10 @@ def salvar_resultados(
         pasta_musica / "dinamica.csv"
     )
 
+    caminho_grafico = (
+        pasta_musica / "grafico_dinamica.png"
+    )
+
     with caminho_json.open(
         "w",
         encoding="utf-8",
@@ -1111,6 +1303,16 @@ def salvar_resultados(
         caminho_csv=caminho_csv,
     )
 
+    print(
+        "Gerando gráfico da dinâmica..."
+    )
+
+    gerar_grafico_dinamica(
+        dinamica=resultado["dinamica"],
+        caminho_grafico=caminho_grafico,
+        nome_musica=caminho_audio.stem,
+    )
+
     print()
     print(
         f"Resultados salvos em: "
@@ -1127,6 +1329,10 @@ def salvar_resultados(
 
     print(
         f"Dinâmica: {caminho_csv.name}"
+    )
+
+    print(
+        f"Gráfico: {caminho_grafico.name}"
     )
 
     return pasta_musica
