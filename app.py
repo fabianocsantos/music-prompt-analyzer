@@ -16,7 +16,6 @@ EXTENSOES_SUPORTADAS = {
     ".ogg",
 }
 
-
 NOMES_NOTAS = [
     "Dó",
     "Dó sustenido",
@@ -31,7 +30,6 @@ NOMES_NOTAS = [
     "Lá sustenido",
     "Si",
 ]
-
 
 PERFIL_MAIOR = np.array([
     6.35,
@@ -48,7 +46,6 @@ PERFIL_MAIOR = np.array([
     2.88,
 ])
 
-
 PERFIL_MENOR = np.array([
     6.33,
     2.68,
@@ -64,7 +61,6 @@ PERFIL_MENOR = np.array([
     3.17,
 ])
 
-
 DURACAO_SEGMENTO_SEGUNDOS = 10
 HOP_LENGTH = 512
 
@@ -72,12 +68,11 @@ LIMIAR_CRESCIMENTO_FORTE = 0.30
 LIMIAR_QUEDA_FORTE = -0.30
 LIMIAR_MUDANCA_SECA = 0.42
 
+LIMIAR_SIMILARIDADE_DISTANTE = 0.84
+LIMIAR_SIMILARIDADE_ADJACENTE = 0.92
+
 
 def listar_arquivos_audio(pasta_input: Path) -> list[Path]:
-    """
-    Retorna todos os arquivos de áudio suportados da pasta input.
-    """
-
     arquivos = [
         arquivo
         for arquivo in pasta_input.iterdir()
@@ -85,28 +80,17 @@ def listar_arquivos_audio(pasta_input: Path) -> list[Path]:
         and arquivo.suffix.lower() in EXTENSOES_SUPORTADAS
     ]
 
-    arquivos.sort(
-        key=lambda arquivo: arquivo.name.lower()
-    )
+    arquivos.sort(key=lambda arquivo: arquivo.name.lower())
 
     return arquivos
 
 
-def escolher_arquivo_audio(
-    arquivos: list[Path],
-) -> Path:
-    """
-    Exibe os arquivos encontrados e permite escolher um pelo número.
-    """
-
+def escolher_arquivo_audio(arquivos: list[Path]) -> Path:
     if not arquivos:
-        extensoes = ", ".join(
-            sorted(EXTENSOES_SUPORTADAS)
-        )
+        extensoes = ", ".join(sorted(EXTENSOES_SUPORTADAS))
 
         raise FileNotFoundError(
-            "Nenhum arquivo de áudio foi encontrado "
-            "na pasta input.\n"
+            "Nenhum arquivo de áudio foi encontrado na pasta input.\n"
             f"Formatos aceitos: {extensoes}"
         )
 
@@ -116,24 +100,15 @@ def escolher_arquivo_audio(
         print("Uma música foi encontrada:")
         print(f"1. {arquivo.name}")
         print()
-        print(
-            f"Selecionando automaticamente: "
-            f"{arquivo.name}"
-        )
+        print(f"Selecionando automaticamente: {arquivo.name}")
 
         return arquivo
 
     print("Músicas encontradas:")
     print()
 
-    for indice, arquivo in enumerate(
-        arquivos,
-        start=1,
-    ):
-        tamanho_mb = (
-            arquivo.stat().st_size
-            / (1024 * 1024)
-        )
+    for indice, arquivo in enumerate(arquivos, start=1):
+        tamanho_mb = arquivo.stat().st_size / (1024 * 1024)
 
         print(
             f"{indice}. {arquivo.name} "
@@ -168,10 +143,6 @@ def escolher_arquivo_audio(
 
 
 def converter_para_numero(valor) -> float:
-    """
-    Converte valores do NumPy ou arrays com um elemento para float.
-    """
-
     array = np.asarray(valor)
 
     if array.size == 0:
@@ -181,10 +152,6 @@ def converter_para_numero(valor) -> float:
 
 
 def formatar_tempo(segundos: float) -> str:
-    """
-    Converte segundos para o formato MM:SS.
-    """
-
     segundos_inteiros = max(
         0,
         int(round(segundos)),
@@ -193,17 +160,10 @@ def formatar_tempo(segundos: float) -> str:
     minutos = segundos_inteiros // 60
     segundos_restantes = segundos_inteiros % 60
 
-    return (
-        f"{minutos:02d}:"
-        f"{segundos_restantes:02d}"
-    )
+    return f"{minutos:02d}:{segundos_restantes:02d}"
 
 
 def classificar_andamento(bpm: float) -> str:
-    """
-    Gera uma descrição simples do andamento.
-    """
-
     if bpm < 60:
         return "muito lento"
 
@@ -223,10 +183,6 @@ def classificar_andamento(bpm: float) -> str:
 
 
 def classificar_energia(rms_medio: float) -> str:
-    """
-    Classifica aproximadamente a energia média do áudio.
-    """
-
     if rms_medio < 0.03:
         return "muito baixa"
 
@@ -242,13 +198,7 @@ def classificar_energia(rms_medio: float) -> str:
     return "muito alta"
 
 
-def classificar_brilho(
-    centroide_medio: float,
-) -> str:
-    """
-    Usa o centroide espectral para estimar o brilho do áudio.
-    """
-
+def classificar_brilho(centroide_medio: float) -> str:
     if centroide_medio < 1500:
         return "escuro e encorpado"
 
@@ -264,10 +214,6 @@ def classificar_brilho(
 def classificar_dinamica_relativa(
     energia_normalizada: float,
 ) -> str:
-    """
-    Classifica um trecho comparando sua energia com o restante da música.
-    """
-
     if energia_normalizada < 0.20:
         return "muito suave"
 
@@ -287,10 +233,6 @@ def calcular_correlacao(
     perfil_audio: np.ndarray,
     perfil_tonal: np.ndarray,
 ) -> float:
-    """
-    Calcula a semelhança entre dois perfis tonais.
-    """
-
     if np.std(perfil_audio) == 0:
         return 0.0
 
@@ -309,10 +251,6 @@ def estimar_tonalidade(
     audio_harmonico: np.ndarray,
     taxa_amostragem: int,
 ) -> dict:
-    """
-    Estima a nota principal e o modo maior ou menor.
-    """
-
     chroma = librosa.feature.chroma_cqt(
         y=audio_harmonico,
         sr=taxa_amostragem,
@@ -358,9 +296,7 @@ def estimar_tonalidade(
             melhor_indice_nota = indice_nota
             melhor_modo = "menor"
 
-    nome_nota = NOMES_NOTAS[
-        melhor_indice_nota
-    ]
+    nome_nota = NOMES_NOTAS[melhor_indice_nota]
 
     confianca_aproximada = max(
         0.0,
@@ -373,13 +309,8 @@ def estimar_tonalidade(
     return {
         "nota": nome_nota,
         "modo": melhor_modo,
-        "tonalidade_completa": (
-            f"{nome_nota} {melhor_modo}"
-        ),
-        "correlacao": round(
-            melhor_correlacao,
-            4,
-        ),
+        "tonalidade_completa": f"{nome_nota} {melhor_modo}",
+        "correlacao": round(melhor_correlacao, 4),
         "confianca_aproximada": round(
             confianca_aproximada,
             4,
@@ -390,10 +321,6 @@ def estimar_tonalidade(
 def normalizar_valores(
     valores: list[float],
 ) -> list[float]:
-    """
-    Normaliza uma sequência para uma escala entre 0 e 1.
-    """
-
     if not valores:
         return []
 
@@ -410,10 +337,7 @@ def normalizar_valores(
         np.percentile(array, 90)
     )
 
-    diferenca = (
-        limite_superior
-        - limite_inferior
-    )
+    diferenca = limite_superior - limite_inferior
 
     if diferenca <= 0:
         return [
@@ -440,10 +364,6 @@ def normalizar_valores(
 def identificar_tendencia_dinamica(
     energias: list[float],
 ) -> str:
-    """
-    Compara o começo e o fim para estimar a tendência geral da faixa.
-    """
-
     if len(energias) < 3:
         return "estável"
 
@@ -464,10 +384,7 @@ def identificar_tendencia_dinamica(
         )
     )
 
-    diferenca = (
-        energia_final
-        - energia_inicio
-    )
+    diferenca = energia_final - energia_inicio
 
     referencia = max(
         energia_inicio,
@@ -475,9 +392,7 @@ def identificar_tendencia_dinamica(
         0.000001,
     )
 
-    variacao_relativa = (
-        diferenca / referencia
-    )
+    variacao_relativa = diferenca / referencia
 
     if variacao_relativa > 0.20:
         return "cresce ao longo da faixa"
@@ -492,10 +407,6 @@ def calcular_media_segmento(
     valores: np.ndarray,
     mascara: np.ndarray,
 ) -> float:
-    """
-    Calcula a média dos valores pertencentes a um segmento.
-    """
-
     trecho = valores[mascara]
 
     if trecho.size == 0:
@@ -510,10 +421,6 @@ def analisar_dinamica(
     audio: np.ndarray,
     taxa_amostragem: int,
 ) -> dict:
-    """
-    Divide a música em trechos e analisa energia e brilho ao longo do tempo.
-    """
-
     rms_frames = librosa.feature.rms(
         y=audio,
         hop_length=HOP_LENGTH,
@@ -528,9 +435,7 @@ def analisar_dinamica(
     )
 
     tempos_frames = librosa.frames_to_time(
-        np.arange(
-            len(rms_frames)
-        ),
+        np.arange(len(rms_frames)),
         sr=taxa_amostragem,
         hop_length=HOP_LENGTH,
     )
@@ -557,9 +462,7 @@ def analisar_dinamica(
             & (tempos_frames < fim_segmento)
         )
 
-        valores_rms = rms_frames[
-            mascara
-        ]
+        valores_rms = rms_frames[mascara]
 
         if valores_rms.size == 0:
             energia_media = 0.0
@@ -567,15 +470,11 @@ def analisar_dinamica(
 
         else:
             energia_media = float(
-                np.mean(
-                    valores_rms
-                )
+                np.mean(valores_rms)
             )
 
             energia_maxima = float(
-                np.max(
-                    valores_rms
-                )
+                np.max(valores_rms)
             )
 
         brilho_medio = calcular_media_segmento(
@@ -679,9 +578,7 @@ def analisar_dinamica(
 
     segmentos_ordenados = sorted(
         linha_do_tempo,
-        key=lambda item: item[
-            "energia_relativa"
-        ],
+        key=lambda item: item["energia_relativa"],
         reverse=True,
     )
 
@@ -689,15 +586,9 @@ def analisar_dinamica(
 
     for segmento in segmentos_ordenados[:3]:
         picos.append({
-            "segmento": segmento[
-                "segmento"
-            ],
-            "inicio": segmento[
-                "inicio_formatado"
-            ],
-            "fim": segmento[
-                "fim_formatado"
-            ],
+            "segmento": segmento["segmento"],
+            "inicio": segmento["inicio_formatado"],
+            "fim": segmento["fim_formatado"],
             "inicio_segundos": segmento[
                 "inicio_segundos"
             ],
@@ -725,20 +616,15 @@ def analisar_dinamica(
     ]
 
     energia_media_global = float(
-        np.mean(
-            energias_medias
-        )
+        np.mean(energias_medias)
     )
 
     desvio_energia = float(
-        np.std(
-            energias_medias
-        )
+        np.std(energias_medias)
     )
 
     coeficiente_variacao = (
-        desvio_energia
-        / energia_media_global
+        desvio_energia / energia_media_global
         if energia_media_global > 0
         else 0.0
     )
@@ -763,9 +649,7 @@ def analisar_dinamica(
         "quantidade_segmentos": len(
             linha_do_tempo
         ),
-        "variacao_dinamica": (
-            variacao_dinamica
-        ),
+        "variacao_dinamica": variacao_dinamica,
         "coeficiente_variacao": round(
             coeficiente_variacao,
             4,
@@ -789,18 +673,20 @@ def classificar_evento_transicao(
     energia_atual: float,
     energia_anterior: float,
 ) -> str:
-    """
-    Classifica uma mudança relevante entre dois segmentos.
-    """
-
     if variacao_energia >= LIMIAR_CRESCIMENTO_FORTE:
-        if energia_anterior < 0.40 and energia_atual >= 0.65:
+        if (
+            energia_anterior < 0.40
+            and energia_atual >= 0.65
+        ):
             return "entrada forte de nova seção"
 
         return "crescimento forte de intensidade"
 
     if variacao_energia <= LIMIAR_QUEDA_FORTE:
-        if energia_anterior >= 0.65 and energia_atual < 0.40:
+        if (
+            energia_anterior >= 0.65
+            and energia_atual < 0.40
+        ):
             return "queda forte para trecho mais suave"
 
         return "queda forte de intensidade"
@@ -823,10 +709,6 @@ def classificar_evento_transicao(
 def detectar_transicoes(
     dinamica: dict,
 ) -> list[dict]:
-    """
-    Detecta mudanças relevantes entre segmentos consecutivos.
-    """
-
     linha_do_tempo = dinamica[
         "linha_do_tempo"
     ]
@@ -841,9 +723,7 @@ def detectar_transicoes(
             indice - 1
         ]
 
-        atual = linha_do_tempo[
-            indice
-        ]
+        atual = linha_do_tempo[indice]
 
         variacao_energia = (
             atual["energia_relativa"]
@@ -927,13 +807,481 @@ def detectar_transicoes(
             ],
         })
 
-    transicoes.sort(
-        key=lambda item: item[
-            "tempo_segundos"
-        ]
+    return transicoes
+
+
+def extrair_vetor_segmento(
+    trecho_audio: np.ndarray,
+    taxa_amostragem: int,
+) -> np.ndarray:
+    if trecho_audio.size == 0:
+        return np.zeros(36)
+
+    chroma = librosa.feature.chroma_cqt(
+        y=trecho_audio,
+        sr=taxa_amostragem,
     )
 
-    return transicoes
+    mfcc = librosa.feature.mfcc(
+        y=trecho_audio,
+        sr=taxa_amostragem,
+        n_mfcc=13,
+    )
+
+    contraste = (
+        librosa.feature.spectral_contrast(
+            y=trecho_audio,
+            sr=taxa_amostragem,
+        )
+    )
+
+    rms = librosa.feature.rms(
+        y=trecho_audio
+    )
+
+    centroide = (
+        librosa.feature.spectral_centroid(
+            y=trecho_audio,
+            sr=taxa_amostragem,
+        )
+    )
+
+    largura = (
+        librosa.feature.spectral_bandwidth(
+            y=trecho_audio,
+            sr=taxa_amostragem,
+        )
+    )
+
+    zero_crossing = (
+        librosa.feature.zero_crossing_rate(
+            trecho_audio
+        )
+    )
+
+    vetor = np.concatenate([
+        np.mean(chroma, axis=1),
+        np.mean(mfcc, axis=1),
+        np.std(mfcc, axis=1),
+        np.mean(contraste, axis=1),
+        np.array([
+            float(np.mean(rms)),
+            float(np.mean(centroide)),
+            float(np.mean(largura)),
+            float(np.mean(zero_crossing)),
+        ]),
+    ])
+
+    return vetor.astype(float)
+
+
+def padronizar_vetores(
+    vetores: np.ndarray,
+) -> np.ndarray:
+    medias = np.mean(
+        vetores,
+        axis=0,
+    )
+
+    desvios = np.std(
+        vetores,
+        axis=0,
+    )
+
+    desvios[desvios == 0] = 1.0
+
+    padronizados = (
+        vetores - medias
+    ) / desvios
+
+    normas = np.linalg.norm(
+        padronizados,
+        axis=1,
+        keepdims=True,
+    )
+
+    normas[normas == 0] = 1.0
+
+    return padronizados / normas
+
+
+def criar_matriz_similaridade(
+    audio: np.ndarray,
+    taxa_amostragem: int,
+    linha_do_tempo: list[dict],
+) -> np.ndarray:
+    vetores = []
+
+    for segmento in linha_do_tempo:
+        inicio_amostra = int(
+            segmento["inicio_segundos"]
+            * taxa_amostragem
+        )
+
+        fim_amostra = int(
+            segmento["fim_segundos"]
+            * taxa_amostragem
+        )
+
+        trecho_audio = audio[
+            inicio_amostra:fim_amostra
+        ]
+
+        vetor = extrair_vetor_segmento(
+            trecho_audio,
+            taxa_amostragem,
+        )
+
+        vetores.append(vetor)
+
+    matriz_vetores = np.asarray(
+        vetores,
+        dtype=float,
+    )
+
+    vetores_padronizados = padronizar_vetores(
+        matriz_vetores
+    )
+
+    similaridade = (
+        vetores_padronizados
+        @ vetores_padronizados.T
+    )
+
+    similaridade = np.clip(
+        similaridade,
+        -1.0,
+        1.0,
+    )
+
+    return similaridade
+
+
+class Agrupador:
+    def __init__(self, quantidade: int):
+        self.pais = list(range(quantidade))
+
+    def encontrar(self, indice: int) -> int:
+        if self.pais[indice] != indice:
+            self.pais[indice] = self.encontrar(
+                self.pais[indice]
+            )
+
+        return self.pais[indice]
+
+    def unir(
+        self,
+        primeiro: int,
+        segundo: int,
+    ) -> None:
+        raiz_primeiro = self.encontrar(
+            primeiro
+        )
+
+        raiz_segundo = self.encontrar(
+            segundo
+        )
+
+        if raiz_primeiro != raiz_segundo:
+            self.pais[raiz_segundo] = (
+                raiz_primeiro
+            )
+
+
+def numero_para_rotulo(numero: int) -> str:
+    rotulo = ""
+    valor = numero
+
+    while True:
+        rotulo = (
+            chr(ord("A") + valor % 26)
+            + rotulo
+        )
+
+        valor = valor // 26 - 1
+
+        if valor < 0:
+            break
+
+    return rotulo
+
+
+def agrupar_segmentos_similares(
+    matriz_similaridade: np.ndarray,
+) -> list[str]:
+    quantidade = matriz_similaridade.shape[0]
+    agrupador = Agrupador(quantidade)
+
+    for primeiro in range(quantidade):
+        for segundo in range(
+            primeiro + 1,
+            quantidade,
+        ):
+            distancia = segundo - primeiro
+
+            if distancia == 1:
+                limiar = (
+                    LIMIAR_SIMILARIDADE_ADJACENTE
+                )
+
+            else:
+                limiar = (
+                    LIMIAR_SIMILARIDADE_DISTANTE
+                )
+
+            if (
+                matriz_similaridade[
+                    primeiro,
+                    segundo,
+                ]
+                >= limiar
+            ):
+                agrupador.unir(
+                    primeiro,
+                    segundo,
+                )
+
+    raizes = [
+        agrupador.encontrar(indice)
+        for indice in range(quantidade)
+    ]
+
+    mapa_rotulos = {}
+    proximo_rotulo = 0
+    rotulos = []
+
+    for raiz in raizes:
+        if raiz not in mapa_rotulos:
+            mapa_rotulos[raiz] = (
+                numero_para_rotulo(
+                    proximo_rotulo
+                )
+            )
+
+            proximo_rotulo += 1
+
+        rotulos.append(
+            mapa_rotulos[raiz]
+        )
+
+    return rotulos
+
+
+def criar_blocos_estrutura(
+    linha_do_tempo: list[dict],
+    rotulos: list[str],
+) -> list[dict]:
+    blocos = []
+
+    for indice, segmento in enumerate(
+        linha_do_tempo
+    ):
+        rotulo = rotulos[indice]
+
+        if (
+            blocos
+            and blocos[-1]["rotulo"] == rotulo
+        ):
+            blocos[-1]["fim_segundos"] = (
+                segmento["fim_segundos"]
+            )
+
+            blocos[-1]["fim_formatado"] = (
+                segmento["fim_formatado"]
+            )
+
+            blocos[-1]["segmentos"].append(
+                segmento["segmento"]
+            )
+
+            blocos[-1]["energias"].append(
+                segmento["energia_relativa"]
+            )
+
+            blocos[-1]["brilhos"].append(
+                segmento["brilho_relativo"]
+            )
+
+        else:
+            blocos.append({
+                "rotulo": rotulo,
+                "inicio_segundos": segmento[
+                    "inicio_segundos"
+                ],
+                "fim_segundos": segmento[
+                    "fim_segundos"
+                ],
+                "inicio_formatado": segmento[
+                    "inicio_formatado"
+                ],
+                "fim_formatado": segmento[
+                    "fim_formatado"
+                ],
+                "segmentos": [
+                    segmento["segmento"]
+                ],
+                "energias": [
+                    segmento["energia_relativa"]
+                ],
+                "brilhos": [
+                    segmento["brilho_relativo"]
+                ],
+            })
+
+    for bloco in blocos:
+        bloco["energia_media"] = round(
+            float(
+                np.mean(
+                    bloco.pop("energias")
+                )
+            ),
+            4,
+        )
+
+        bloco["brilho_medio"] = round(
+            float(
+                np.mean(
+                    bloco.pop("brilhos")
+                )
+            ),
+            4,
+        )
+
+        bloco["duracao_segundos"] = round(
+            bloco["fim_segundos"]
+            - bloco["inicio_segundos"],
+            2,
+        )
+
+    return blocos
+
+
+def sugerir_funcoes_blocos(
+    blocos: list[dict],
+) -> list[dict]:
+    ocorrencias = {}
+
+    for bloco in blocos:
+        rotulo = bloco["rotulo"]
+
+        ocorrencias.setdefault(
+            rotulo,
+            [],
+        ).append(bloco)
+
+    quantidade_blocos = len(blocos)
+
+    for indice, bloco in enumerate(blocos):
+        repeticoes = len(
+            ocorrencias[bloco["rotulo"]]
+        )
+
+        primeira_posicao = indice == 0
+        ultima_posicao = (
+            indice == quantidade_blocos - 1
+        )
+
+        if (
+            primeira_posicao
+            and repeticoes == 1
+        ):
+            hipotese = "possível introdução"
+
+        elif (
+            ultima_posicao
+            and bloco["energia_media"] < 0.45
+        ):
+            hipotese = "possível encerramento"
+
+        elif (
+            repeticoes >= 2
+            and bloco["energia_media"] >= 0.60
+        ):
+            hipotese = "possível refrão ou seção de destaque"
+
+        elif repeticoes >= 2:
+            hipotese = "possível verso ou seção recorrente"
+
+        elif (
+            not primeira_posicao
+            and not ultima_posicao
+        ):
+            hipotese = "possível ponte ou transição"
+
+        else:
+            hipotese = "seção única"
+
+        bloco["quantidade_ocorrencias"] = (
+            repeticoes
+        )
+
+        bloco["hipotese_funcao"] = hipotese
+
+    return blocos
+
+
+def analisar_repeticoes(
+    audio: np.ndarray,
+    taxa_amostragem: int,
+    dinamica: dict,
+) -> dict:
+    linha_do_tempo = dinamica[
+        "linha_do_tempo"
+    ]
+
+    matriz_similaridade = (
+        criar_matriz_similaridade(
+            audio=audio,
+            taxa_amostragem=taxa_amostragem,
+            linha_do_tempo=linha_do_tempo,
+        )
+    )
+
+    rotulos = agrupar_segmentos_similares(
+        matriz_similaridade
+    )
+
+    blocos = criar_blocos_estrutura(
+        linha_do_tempo,
+        rotulos,
+    )
+
+    blocos = sugerir_funcoes_blocos(
+        blocos
+    )
+
+    mapa_segmentos = " - ".join(
+        rotulos
+    )
+
+    mapa_blocos = " - ".join(
+        bloco["rotulo"]
+        for bloco in blocos
+    )
+
+    rotulos_repetidos = sorted({
+        bloco["rotulo"]
+        for bloco in blocos
+        if bloco["quantidade_ocorrencias"] >= 2
+    })
+
+    return {
+        "limiar_similaridade_distante": (
+            LIMIAR_SIMILARIDADE_DISTANTE
+        ),
+        "limiar_similaridade_adjacente": (
+            LIMIAR_SIMILARIDADE_ADJACENTE
+        ),
+        "mapa_segmentos": mapa_segmentos,
+        "mapa_blocos": mapa_blocos,
+        "rotulos_segmentos": rotulos,
+        "rotulos_repetidos": rotulos_repetidos,
+        "quantidade_blocos": len(blocos),
+        "blocos": blocos,
+        "matriz_similaridade": (
+            matriz_similaridade
+        ),
+    }
 
 
 def gerar_grafico_dinamica(
@@ -942,10 +1290,6 @@ def gerar_grafico_dinamica(
     caminho_grafico: Path,
     nome_musica: str,
 ) -> None:
-    """
-    Cria um gráfico de energia com marcações de transições.
-    """
-
     linha_do_tempo = dinamica[
         "linha_do_tempo"
     ]
@@ -1065,16 +1409,11 @@ def gerar_grafico_dinamica(
     )
 
     eixo.set_xticklabels([
-        formatar_tempo(
-            tempo
-        )
+        formatar_tempo(tempo)
         for tempo in marcacoes
     ])
 
-    eixo.grid(
-        alpha=0.25,
-    )
-
+    eixo.grid(alpha=0.25)
     eixo.legend()
 
     figura.tight_layout()
@@ -1085,22 +1424,80 @@ def gerar_grafico_dinamica(
         bbox_inches="tight",
     )
 
-    plt.close(
-        figura
+    plt.close(figura)
+
+
+def gerar_grafico_similaridade(
+    matriz_similaridade: np.ndarray,
+    caminho_grafico: Path,
+    nome_musica: str,
+) -> None:
+    figura, eixo = plt.subplots(
+        figsize=(9, 8)
     )
+
+    imagem = eixo.imshow(
+        matriz_similaridade,
+        origin="lower",
+        aspect="auto",
+        vmin=-1,
+        vmax=1,
+    )
+
+    eixo.set_title(
+        f"Similaridade entre trechos: {nome_musica}"
+    )
+
+    eixo.set_xlabel(
+        "Segmento comparado"
+    )
+
+    eixo.set_ylabel(
+        "Segmento de referência"
+    )
+
+    quantidade = (
+        matriz_similaridade.shape[0]
+    )
+
+    marcacoes = np.arange(quantidade)
+
+    eixo.set_xticks(marcacoes)
+    eixo.set_yticks(marcacoes)
+
+    eixo.set_xticklabels(
+        marcacoes + 1,
+        rotation=90,
+        fontsize=7,
+    )
+
+    eixo.set_yticklabels(
+        marcacoes + 1,
+        fontsize=7,
+    )
+
+    figura.colorbar(
+        imagem,
+        ax=eixo,
+        label="Similaridade",
+    )
+
+    figura.tight_layout()
+
+    figura.savefig(
+        caminho_grafico,
+        dpi=160,
+        bbox_inches="tight",
+    )
+
+    plt.close(figura)
 
 
 def analisar_audio(
     caminho_audio: Path,
 ) -> dict:
-    """
-    Carrega o áudio e extrai características musicais.
-    """
-
     print()
-    print(
-        f"Carregando: {caminho_audio.name}"
-    )
+    print(f"Carregando: {caminho_audio.name}")
 
     audio, taxa_amostragem = librosa.load(
         caminho_audio,
@@ -1110,8 +1507,7 @@ def analisar_audio(
 
     if audio.size == 0:
         raise ValueError(
-            "O arquivo foi carregado, "
-            "mas não contém áudio."
+            "O arquivo foi carregado, mas não contém áudio."
         )
 
     print("Calculando duração...")
@@ -1127,9 +1523,7 @@ def analisar_audio(
     )
 
     audio_harmonico, audio_percussivo = (
-        librosa.effects.hpss(
-            audio
-        )
+        librosa.effects.hpss(audio)
     )
 
     print("Estimando BPM...")
@@ -1139,9 +1533,7 @@ def analisar_audio(
         sr=taxa_amostragem,
     )
 
-    bpm = converter_para_numero(
-        tempo
-    )
+    bpm = converter_para_numero(tempo)
 
     print("Estimando tonalidade...")
 
@@ -1152,25 +1544,13 @@ def analisar_audio(
 
     print("Calculando energia geral...")
 
-    rms = librosa.feature.rms(
-        y=audio
-    )
+    rms = librosa.feature.rms(y=audio)
 
-    rms_medio = float(
-        np.mean(
-            rms
-        )
-    )
-
-    rms_maximo = float(
-        np.max(
-            rms
-        )
-    )
+    rms_medio = float(np.mean(rms))
+    rms_maximo = float(np.max(rms))
 
     print(
-        "Analisando características "
-        "espectrais..."
+        "Analisando características espectrais..."
     )
 
     centroide = (
@@ -1194,26 +1574,19 @@ def analisar_audio(
     )
 
     centroide_medio = float(
-        np.mean(
-            centroide
-        )
+        np.mean(centroide)
     )
 
     largura_media = float(
-        np.mean(
-            largura_espectral
-        )
+        np.mean(largura_espectral)
     )
 
     zero_crossing_medio = float(
-        np.mean(
-            zero_crossing
-        )
+        np.mean(zero_crossing)
     )
 
     print(
-        "Analisando dinâmica ao longo "
-        "da música..."
+        "Analisando dinâmica ao longo da música..."
     )
 
     dinamica = analisar_dinamica(
@@ -1227,6 +1600,20 @@ def analisar_audio(
 
     transicoes = detectar_transicoes(
         dinamica
+    )
+
+    print(
+        "Procurando trechos semelhantes e repetições..."
+    )
+
+    repeticoes = analisar_repeticoes(
+        audio=audio,
+        taxa_amostragem=taxa_amostragem,
+        dinamica=dinamica,
+    )
+
+    matriz_similaridade = repeticoes.pop(
+        "matriz_similaridade"
     )
 
     resultado = {
@@ -1258,14 +1645,10 @@ def analisar_audio(
                 2,
             ),
             "classificacao": (
-                classificar_andamento(
-                    bpm
-                )
+                classificar_andamento(bpm)
             ),
             "batidas_detectadas": int(
-                len(
-                    batidas
-                )
+                len(batidas)
             ),
         },
         "tonalidade": tonalidade,
@@ -1309,27 +1692,34 @@ def analisar_audio(
                 transicoes
             ),
             "transicoes": transicoes,
+            "repeticoes": repeticoes,
         },
     }
 
-    return resultado
+    return {
+        "resultado": resultado,
+        "matriz_similaridade": (
+            matriz_similaridade
+        ),
+    }
 
 
 def criar_descricao(
     resultado: dict,
 ) -> str:
-    """
-    Converte os resultados em uma descrição textual.
-    """
-
     ritmo = resultado["ritmo"]
     tonalidade = resultado["tonalidade"]
     energia = resultado["energia"]
     espectro = resultado["espectro"]
     duracao = resultado["duracao"]
     dinamica = resultado["dinamica"]
+
     estrutura = resultado[
         "estrutura_aproximada"
+    ]
+
+    repeticoes = estrutura[
+        "repeticoes"
     ]
 
     picos = dinamica[
@@ -1352,7 +1742,7 @@ def criar_descricao(
             "um pico principal."
         )
 
-    descricao = (
+    return (
         f"Faixa com aproximadamente "
         f"{duracao['minutos']:.2f} minutos, "
         f"andamento {ritmo['classificacao']} "
@@ -1370,20 +1760,16 @@ def criar_descricao(
         f"{dinamica['tendencia_geral']}. "
         f"Foram detectadas "
         f"{estrutura['quantidade_transicoes']} "
-        f"mudanças relevantes entre os trechos. "
+        f"mudanças relevantes. "
+        f"O mapa estrutural aproximado é "
+        f"{repeticoes['mapa_blocos']}. "
         f"{descricao_pico}"
     )
-
-    return descricao
 
 
 def normalizar_nome_arquivo(
     nome: str,
 ) -> str:
-    """
-    Cria um nome seguro para pastas e arquivos.
-    """
-
     nome = nome.lower()
 
     substituicoes = {
@@ -1438,10 +1824,6 @@ def salvar_csv_dinamica(
     dinamica: dict,
     caminho_csv: Path,
 ) -> None:
-    """
-    Salva a linha do tempo dinâmica em CSV.
-    """
-
     campos = [
         "segmento",
         "inicio_segundos",
@@ -1478,10 +1860,6 @@ def salvar_csv_transicoes(
     transicoes: list[dict],
     caminho_csv: Path,
 ) -> None:
-    """
-    Salva as transições detectadas em CSV.
-    """
-
     campos = [
         "tempo_segundos",
         "tempo_formatado",
@@ -1516,24 +1894,94 @@ def salvar_csv_transicoes(
         )
 
 
+def salvar_csv_similaridade(
+    matriz: np.ndarray,
+    caminho_csv: Path,
+) -> None:
+    with caminho_csv.open(
+        "w",
+        encoding="utf-8-sig",
+        newline="",
+    ) as arquivo_csv:
+        escritor = csv.writer(
+            arquivo_csv,
+            delimiter=";",
+        )
+
+        quantidade = matriz.shape[0]
+
+        cabecalho = [
+            "segmento"
+        ] + [
+            str(indice + 1)
+            for indice in range(quantidade)
+        ]
+
+        escritor.writerow(cabecalho)
+
+        for indice in range(quantidade):
+            linha = [
+                indice + 1
+            ] + [
+                round(
+                    float(valor),
+                    4,
+                )
+                for valor in matriz[indice]
+            ]
+
+            escritor.writerow(linha)
+
+
+def criar_texto_mapa_estrutura(
+    repeticoes: dict,
+) -> str:
+    linhas = [
+        "MAPA ESTRUTURAL APROXIMADO",
+        "==========================",
+        "",
+        f"Segmentos: {repeticoes['mapa_segmentos']}",
+        f"Blocos: {repeticoes['mapa_blocos']}",
+        "",
+        "BLOCOS DETECTADOS",
+        "-----------------",
+    ]
+
+    for bloco in repeticoes["blocos"]:
+        linhas.append(
+            f"{bloco['rotulo']}: "
+            f"{bloco['inicio_formatado']} até "
+            f"{bloco['fim_formatado']} | "
+            f"{bloco['hipotese_funcao']} | "
+            f"energia {bloco['energia_media']:.2f} | "
+            f"{bloco['quantidade_ocorrencias']} ocorrência(s)"
+        )
+
+    linhas.extend([
+        "",
+        "Observação:",
+        (
+            "Os nomes das funções são hipóteses baseadas "
+            "em repetição e energia. Não são identificações "
+            "musicais definitivas."
+        ),
+    ])
+
+    return "\n".join(linhas)
+
+
 def salvar_resultados(
     resultado: dict,
     descricao: str,
+    matriz_similaridade: np.ndarray,
     pasta_output: Path,
     caminho_audio: Path,
 ) -> Path:
-    """
-    Cria uma pasta exclusiva para a música e salva os resultados.
-    """
-
     nome_base = normalizar_nome_arquivo(
         caminho_audio.stem
     )
 
-    pasta_musica = (
-        pasta_output / nome_base
-    )
-
+    pasta_musica = pasta_output / nome_base
     contador = 2
 
     while pasta_musica.exists():
@@ -1553,7 +2001,7 @@ def salvar_resultados(
         pasta_musica / "analise.json"
     )
 
-    caminho_txt = (
+    caminho_descricao = (
         pasta_musica / "descricao.txt"
     )
 
@@ -1565,8 +2013,22 @@ def salvar_resultados(
         pasta_musica / "transicoes.csv"
     )
 
-    caminho_grafico = (
-        pasta_musica / "grafico_dinamica.png"
+    caminho_similaridade = (
+        pasta_musica / "similaridade.csv"
+    )
+
+    caminho_mapa = (
+        pasta_musica / "mapa_estrutura.txt"
+    )
+
+    caminho_grafico_dinamica = (
+        pasta_musica
+        / "grafico_dinamica.png"
+    )
+
+    caminho_grafico_similaridade = (
+        pasta_musica
+        / "grafico_similaridade.png"
     )
 
     with caminho_json.open(
@@ -1580,24 +2042,41 @@ def salvar_resultados(
             indent=4,
         )
 
-    with caminho_txt.open(
+    with caminho_descricao.open(
         "w",
         encoding="utf-8",
     ) as arquivo_txt:
-        arquivo_txt.write(
-            descricao
-        )
+        arquivo_txt.write(descricao)
+
+    repeticoes = resultado[
+        "estrutura_aproximada"
+    ]["repeticoes"]
+
+    texto_mapa = criar_texto_mapa_estrutura(
+        repeticoes
+    )
+
+    with caminho_mapa.open(
+        "w",
+        encoding="utf-8",
+    ) as arquivo_mapa:
+        arquivo_mapa.write(texto_mapa)
 
     salvar_csv_dinamica(
-        dinamica=resultado["dinamica"],
-        caminho_csv=caminho_dinamica,
+        resultado["dinamica"],
+        caminho_dinamica,
     )
 
     salvar_csv_transicoes(
-        transicoes=resultado[
-            "estrutura_aproximada"
-        ]["transicoes"],
-        caminho_csv=caminho_transicoes,
+        resultado["estrutura_aproximada"][
+            "transicoes"
+        ],
+        caminho_transicoes,
+    )
+
+    salvar_csv_similaridade(
+        matriz_similaridade,
+        caminho_similaridade,
     )
 
     print(
@@ -1609,7 +2088,23 @@ def salvar_resultados(
         transicoes=resultado[
             "estrutura_aproximada"
         ]["transicoes"],
-        caminho_grafico=caminho_grafico,
+        caminho_grafico=(
+            caminho_grafico_dinamica
+        ),
+        nome_musica=caminho_audio.stem,
+    )
+
+    print(
+        "Gerando mapa visual de similaridade..."
+    )
+
+    gerar_grafico_similaridade(
+        matriz_similaridade=(
+            matriz_similaridade
+        ),
+        caminho_grafico=(
+            caminho_grafico_similaridade
+        ),
         nome_musica=caminho_audio.stem,
     )
 
@@ -1619,114 +2114,89 @@ def salvar_resultados(
         f"{pasta_musica}"
     )
 
-    print(
-        f"JSON: {caminho_json.name}"
-    )
-
-    print(
-        f"Descrição: {caminho_txt.name}"
-    )
-
-    print(
-        f"Dinâmica: {caminho_dinamica.name}"
-    )
-
-    print(
-        f"Transições: {caminho_transicoes.name}"
-    )
-
-    print(
-        f"Gráfico: {caminho_grafico.name}"
-    )
+    print("Arquivos gerados:")
+    print("- analise.json")
+    print("- descricao.txt")
+    print("- dinamica.csv")
+    print("- transicoes.csv")
+    print("- similaridade.csv")
+    print("- mapa_estrutura.txt")
+    print("- grafico_dinamica.png")
+    print("- grafico_similaridade.png")
 
     return pasta_musica
 
 
-def exibir_resumo_dinamica(
+def exibir_resumo(
     resultado: dict,
 ) -> None:
-    """
-    Exibe os dados principais da dinâmica no terminal.
-    """
-
     dinamica = resultado["dinamica"]
-
-    print()
-    print("DINÂMICA")
-    print("--------")
-
-    print(
-        f"Variação dinâmica: "
-        f"{dinamica['variacao_dinamica']}"
-    )
-
-    print(
-        f"Tendência: "
-        f"{dinamica['tendencia_geral']}"
-    )
-
-    print(
-        f"Trechos suaves: "
-        f"{dinamica['segmentos_suaves']}"
-    )
-
-    print(
-        f"Trechos intensos: "
-        f"{dinamica['segmentos_intensos']}"
-    )
-
-    print()
-    print("Picos principais:")
-
-    for indice, pico in enumerate(
-        dinamica["picos_principais"],
-        start=1,
-    ):
-        print(
-            f"{indice}. "
-            f"{pico['inicio']} até "
-            f"{pico['fim']} "
-            f"({pico['classificacao']})"
-        )
-
-
-def exibir_transicoes(
-    resultado: dict,
-) -> None:
-    """
-    Exibe as mudanças relevantes detectadas.
-    """
 
     estrutura = resultado[
         "estrutura_aproximada"
     ]
 
-    transicoes = estrutura[
-        "transicoes"
+    repeticoes = estrutura[
+        "repeticoes"
     ]
+
+    print()
+    print("DINÂMICA")
+    print("--------")
+    print(
+        f"Variação dinâmica: "
+        f"{dinamica['variacao_dinamica']}"
+    )
+    print(
+        f"Tendência: "
+        f"{dinamica['tendencia_geral']}"
+    )
 
     print()
     print("MUDANÇAS RELEVANTES")
     print("-------------------")
 
+    transicoes = estrutura[
+        "transicoes"
+    ]
+
     if not transicoes:
         print(
             "Nenhuma mudança forte foi detectada."
         )
-        return
 
-    for transicao in transicoes:
+    else:
+        for transicao in transicoes:
+            print(
+                f"{transicao['tempo_formatado']} "
+                f"{transicao['evento']}"
+            )
+
+    print()
+    print("ESTRUTURA APROXIMADA")
+    print("--------------------")
+    print(
+        f"Mapa por segmentos: "
+        f"{repeticoes['mapa_segmentos']}"
+    )
+    print(
+        f"Mapa por blocos: "
+        f"{repeticoes['mapa_blocos']}"
+    )
+
+    print()
+    print("Blocos:")
+
+    for bloco in repeticoes["blocos"]:
         print(
-            f"{transicao['tempo_formatado']} "
-            f"{transicao['evento']}"
+            f"{bloco['rotulo']} | "
+            f"{bloco['inicio_formatado']} até "
+            f"{bloco['fim_formatado']} | "
+            f"{bloco['hipotese_funcao']}"
         )
 
 
 def main() -> None:
-    """
-    Ponto de entrada do programa.
-    """
-
     pasta_projeto = (
         Path(__file__).resolve().parent
     )
@@ -1739,13 +2209,8 @@ def main() -> None:
         pasta_projeto / "output"
     )
 
-    pasta_input.mkdir(
-        exist_ok=True
-    )
-
-    pasta_output.mkdir(
-        exist_ok=True
-    )
+    pasta_input.mkdir(exist_ok=True)
+    pasta_output.mkdir(exist_ok=True)
 
     print()
     print("Music Prompt Analyzer")
@@ -1761,8 +2226,18 @@ def main() -> None:
             arquivos
         )
 
-        resultado = analisar_audio(
+        analise_completa = analisar_audio(
             caminho_audio
+        )
+
+        resultado = analise_completa[
+            "resultado"
+        ]
+
+        matriz_similaridade = (
+            analise_completa[
+                "matriz_similaridade"
+            ]
         )
 
         descricao = criar_descricao(
@@ -1772,6 +2247,9 @@ def main() -> None:
         pasta_resultado = salvar_resultados(
             resultado=resultado,
             descricao=descricao,
+            matriz_similaridade=(
+                matriz_similaridade
+            ),
             pasta_output=pasta_output,
             caminho_audio=caminho_audio,
         )
@@ -1781,13 +2259,7 @@ def main() -> None:
         print("------")
         print(descricao)
 
-        exibir_resumo_dinamica(
-            resultado
-        )
-
-        exibir_transicoes(
-            resultado
-        )
+        exibir_resumo(resultado)
 
         print()
         print(
@@ -1805,17 +2277,14 @@ def main() -> None:
         print()
         print()
         print(
-            "Operação cancelada "
-            "pelo usuário."
+            "Operação cancelada pelo usuário."
         )
 
     except Exception as erro:
         print()
         print(
-            "Ocorreu um erro durante "
-            "a análise:"
+            "Ocorreu um erro durante a análise:"
         )
-
         print(
             f"{type(erro).__name__}: "
             f"{erro}"

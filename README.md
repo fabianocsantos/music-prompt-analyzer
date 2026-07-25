@@ -54,7 +54,21 @@ O programa já consegue:
 
 \- gerar um relatório de transições em CSV;
 
-\- marcar transições no gráfico de dinâmica.
+\- marcar transições no gráfico de dinâmica;
+
+\- comparar características acústicas entre os segmentos;
+
+\- identificar trechos semelhantes que se repetem;
+
+\- criar mapas estruturais em letras, como A-B-A-C;
+
+\- sugerir possíveis introduções, versos, refrões e pontes;
+
+\- gerar uma matriz de similaridade em CSV;
+
+\- gerar um mapa visual de similaridade;
+
+\- gerar um relatório textual da estrutura aproximada.
 
 
 \## Tecnologias
@@ -94,6 +108,12 @@ music\_prompt\_analyzer/
 ├── grafico_dinamica.png
 
 ├── transicoes.csv
+
+├── similaridade.csv
+
+├── mapa_estrutura.txt
+
+├── grafico_similaridade.png
 
 ├── README.md
 
