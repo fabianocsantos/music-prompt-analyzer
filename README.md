@@ -86,7 +86,13 @@ O programa já consegue:
 
 \- detecção de transições separada do arquivo principal;
 
-\- geração do gráfico de dinâmica movida para o módulo de dinâmica.
+\- geração do gráfico de dinâmica movida para o módulo de dinâmica;
+
+\- análise de similaridade isolada em `src/structure_analysis.py`;
+
+\- agrupamento de trechos e criação dos mapas estruturais separados do arquivo principal;
+
+\- geração do gráfico de similaridade movida para o módulo estrutural.
 
 
 \## Tecnologias
@@ -120,11 +126,11 @@ music_prompt_analyzer/
 │   ├── audio_files.py
 │   ├── basic_analysis.py
 │   ├── dynamics.py
+│   ├── structure_analysis.py
 │   └── helpers.py
 │
 ├── input/
 └── output/
-
 
 
 
